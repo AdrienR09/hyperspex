@@ -175,7 +175,6 @@ class ColorbarWidget(QtWidgets.QWidget):
     def init_colorbar(self):
 
         self.my_colors = ColorScaleInferno()
-        self._color_map = ColorScaleMagma()
         self._cb = ColorBar(self.my_colors.cmap_normed, width=100, cb_min=self._cb_min, cb_max=self._cb_max)
         self.colorbar.addItem(self._cb)
         self.colorbar.hideAxis('bottom')

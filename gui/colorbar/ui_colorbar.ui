@@ -44,6 +44,15 @@
          <height>16777215</height>
         </size>
        </property>
+       <property name="backgroundBrush">
+        <brush brushstyle="NoBrush">
+         <color alpha="0">
+          <red>0</red>
+          <green>0</green>
+          <blue>0</blue>
+         </color>
+        </brush>
+       </property>
       </widget>
      </item>
     </layout>

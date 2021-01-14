@@ -1,3 +1,3 @@
 {
-    "files": ["main.py","ui_mainwindow.ui","ui_spectrum_view.ui","ui_spectrum_dock.ui","ui_image_dock.ui"]
+    "files": ["main.py","ui_mainwindow.ui","ui_spectrum_view.ui","ui_image_dock.ui","ui_spectrum_dock.ui","ui_spectrum_window.ui"]
 }
