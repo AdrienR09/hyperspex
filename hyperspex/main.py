@@ -9,10 +9,12 @@ from PyQt5.QtCore import Qt
 from PyQt5.Qt import QRectF, QPoint
 import pyqtgraph as pg
 from qtpy import uic
-from style.colordefs import ColorScaleInferno, ColorScaleMagma
-from gui.colorbar.colorbar import ColorbarWidget
-from gui.scientific_spinbox.scientific_spinbox import ScienDSpinBox
+from hyperspex.style.colordefs import ColorScaleInferno, ColorScaleMagma
+from hyperspex.gui.colorbar.colorbar import ColorbarWidget
+from hyperspex.gui.scientific_spinbox.scientific_spinbox import ScienDSpinBox
 
+import scipy as sc
+from scipy.constants import c, h
 import numpy as np
 
 class SpectrumWindow(QMainWindow):
@@ -28,7 +30,7 @@ class SpectrumWindow(QMainWindow):
         super().__init__()
         uic.loadUi(ui_file, self)
 
-        with open("style/qdark.qss", 'r') as stylesheetfile:
+        with open(os.path.join(this_dir, "style/qdark.qss"), 'r') as stylesheetfile:
             stylesheet = stylesheetfile.read()
         self.setStyleSheet(stylesheet)
 
@@ -45,7 +47,7 @@ class ImageWindow(QMainWindow):
         super().__init__()
         uic.loadUi(ui_file, self)
 
-        with open("style/qdark.qss", 'r') as stylesheetfile:
+        with open(os.path.join(this_dir, "style/qdark.qss"), 'r') as stylesheetfile:
             stylesheet = stylesheetfile.read()
         self.setStyleSheet(stylesheet)
 
@@ -53,6 +55,7 @@ class Hyperspex:
 
     def __init__(self, data, x_range=None, y_range=None, wavelength_range=None):
 
+        app = QApplication([])
         self._spectrum_window = SpectrumWindow()
         self._image_window = ImageWindow()
 
@@ -65,6 +68,7 @@ class Hyperspex:
         self.init_image()
 
         self.show()
+        sys.exit(app.exec_())
 
     def show(self):
         """Make window visible and put it above all other windows.
@@ -103,8 +107,8 @@ class Hyperspex:
 
     def init_image(self):
 
-        self.pos1 = [0, self._x_range.size-1]
-        self.pos2 = [0, self._y_range.size-1]
+        self.pos1 = [0, 0]
+        self.pos2 = [self._x_range.size-1, self._y_range.size-1]
 
         self.my_colors = ColorScaleInferno()
         self._image = pg.ImageItem(image=self.get_image(), axisOrder='row-major')
@@ -114,8 +118,7 @@ class Hyperspex:
         self._colorbar = ColorbarWidget(self._image)
         self._image_window.colorbar.addWidget(self._colorbar)
 
-        self._image_roi = pg.ROI([self.pos1[0], self.pos2[0]], [self.pos1[1], self.pos2[1]],
-                                 maxBounds=QRectF(QPoint(0,0), QPoint(self._x_range.size, self._y_range.size)))
+        self._image_roi = pg.ROI(self.pos1, self.pos2, maxBounds=QRectF(QPoint(0,0), QPoint(self._x_range.size, self._y_range.size)))
         self._image_roi.addScaleHandle((1,0), (0,1))
         self._image_roi.addScaleHandle((0,1), (1,0))
         self._image_window.image.addItem(self._image_roi)
@@ -201,13 +204,9 @@ class Hyperspex:
 
         self._spectral_roi.setBounds([self._wavelength_range.min(), self._wavelength_range.max()])
 
-    def set_energy_range(self):
-        return
-
 
 def load_spim(filepath):
     with np.load(filepath) as data:
-        spim = []
         x = np.unique(data['x'])
         y = np.unique(data['y'])
         wavelength = np.array(data.files[3:], dtype=float)
@@ -223,9 +222,4 @@ def load_spim(filepath):
     }
 
 if __name__ == "__main__":
-    app = QApplication([])
-    dirpath = "/Users/adrien/Desktop/hBN/Samples/POSTECH/Experimental Data/sample_3_1/spim/10_11_2020/"
-    filepath = np.array([dirpath + filename for t in os.walk(dirpath) for filename in t[2] if filename[-3:] == 'npz'])
-    spim_dict = load_spim(filepath[1])
-    hyperspex = Hyperspex(spim_dict["spim"]-300, spim_dict["x"], spim_dict["y"], spim_dict["wavelength"])
-    sys.exit(app.exec_())
+    hyperspex = Hyperspex(np.random.normal(5, 2, (200,200,200)), np.arange(200), np.arange(200), np.arange(200))

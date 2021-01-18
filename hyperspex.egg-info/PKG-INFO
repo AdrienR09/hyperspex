@@ -1,0 +1,15 @@
+Metadata-Version: 2.1
+Name: hyperspex
+Version: 0.0.2
+Summary: This package allow you to explore hyperspectral data easly.
+Home-page: https://github.com/AdrienR09/hyperspex
+Author: Adrien Rousseau
+Author-email: adrienrousseau@gmail.com
+License: UNKNOWN
+Description: # hyperspex
+Platform: UNKNOWN
+Classifier: Programming Language :: Python :: 3
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Operating System :: OS Independent
+Requires-Python: >=3.6
+Description-Content-Type: text/markdown

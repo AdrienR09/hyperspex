@@ -50,7 +50,11 @@
        </spacer>
       </item>
       <item>
-       <layout class="QVBoxLayout" name="switch_energy"/>
+       <widget class="QPushButton" name="energy_button">
+        <property name="text">
+         <string>PushButton</string>
+        </property>
+       </widget>
       </item>
      </layout>
     </item>
