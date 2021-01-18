@@ -23,8 +23,8 @@ import os
 import pyqtgraph as pg
 from functools import partial
 
-from style.colordefs import ColorScaleInferno, ColorScaleMagma
-from gui.scientific_spinbox.scientific_spinbox import ScienDSpinBox, ScienSpinBox
+from hyperspex.style.colordefs import ColorScaleInferno, ColorScaleMagma
+from hyperspex.gui.scientific_spinbox.scientific_spinbox import ScienDSpinBox, ScienSpinBox
 
 from qtpy import QtWidgets
 from qtpy import uic
@@ -56,7 +56,7 @@ class ColorBar(pg.GraphicsObject):
 
         self.refresh_colorbar(cb_min, cb_max)
 
-    def refresh_colorbar(self, cb_min, cb_max, width = None, height = None, xMin = None, yMin = None):
+    def refresh_colorbar(self, cb_min, cb_max, width=None, height=None, xMin=None, yMin=None):
         """ Refresh the appearance of the colorbar for a changed count range.
 
         @param float cb_min: The minimal count value should be passed here.
@@ -70,18 +70,18 @@ class ColorBar(pg.GraphicsObject):
         else:
             self.width = width
 
-#       FIXME: Until now, if you want to refresh the colorbar, a new QPainter
-#              object has been created, but I think that it is not necassary.
-#              I have to figure out how to use the created object properly.
+        #       FIXME: Until now, if you want to refresh the colorbar, a new QPainter
+        #              object has been created, but I think that it is not necassary.
+        #              I have to figure out how to use the created object properly.
         p = pg.QtGui.QPainter(self.pic)
         p.drawRect(self.boundingRect())
         p.setPen(pg.mkPen('k'))
-        grad = pg.QtGui.QLinearGradient(width/2.0, cb_min*1.0, width/2.0, cb_max*1.0)
+        grad = pg.QtGui.QLinearGradient(width / 2.0, cb_min * 1.0, width / 2.0, cb_max * 1.0)
         for stop, color in zip(self.stops, self.colors):
-            grad.setColorAt(1.0 - stop, pg.QtGui.QColor(*[255*c for c in color]))
+            grad.setColorAt(1.0 - stop, pg.QtGui.QColor(*[255 * c for c in color]))
         p.setBrush(pg.QtGui.QBrush(grad))
         if xMin is None:
-            p.drawRect(pg.QtCore.QRectF(0, cb_min, width, cb_max-cb_min))
+            p.drawRect(pg.QtCore.QRectF(0, cb_min, width, cb_max - cb_min))
         else:
             # If this picture whants to be set in a plot, which is going to be
             # saved:
