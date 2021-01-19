@@ -16,7 +16,7 @@
   <widget class="QWidget" name="centralwidget">
    <layout class="QGridLayout" name="gridLayout">
     <item row="0" column="0">
-     <widget class="PlotWidget" name="image">
+     <widget class="PlotWidget" name="image_view">
       <property name="backgroundBrush">
        <brush brushstyle="NoBrush">
         <color alpha="0">

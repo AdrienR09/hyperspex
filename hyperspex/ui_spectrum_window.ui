@@ -16,7 +16,7 @@
   <widget class="QWidget" name="centralwidget">
    <layout class="QGridLayout" name="gridLayout">
     <item row="0" column="2">
-     <widget class="PlotWidget" name="spectrum">
+     <widget class="PlotWidget" name="spectrum_view">
       <property name="backgroundBrush">
        <brush brushstyle="NoBrush">
         <color alpha="0">
@@ -68,7 +68,7 @@
        </widget>
       </item>
       <item>
-       <layout class="QHBoxLayout" name="roi_3_layout_2"/>
+       <layout class="QHBoxLayout" name="roi_2_layout"/>
       </item>
       <item>
        <widget class="QPushButton" name="roi_btn_3">
@@ -88,7 +88,7 @@
        </widget>
       </item>
       <item>
-       <layout class="QVBoxLayout" name="roi_4_layout"/>
+       <layout class="QHBoxLayout" name="roi_4_layout"/>
       </item>
      </layout>
     </item>
@@ -100,7 +100,7 @@
      <x>0</x>
      <y>0</y>
      <width>800</width>
-     <height>21</height>
+     <height>24</height>
     </rect>
    </property>
   </widget>
