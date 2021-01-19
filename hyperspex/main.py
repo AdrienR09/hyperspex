@@ -12,11 +12,89 @@ from hyperspex.style.colordefs import ColorScaleInferno
 from hyperspex.gui.colorbar.colorbar import ColorbarWidget
 from hyperspex.gui.scientific_spinbox.scientific_spinbox import ScienDSpinBox
 
-from scipy.constants import c, h
+from scipy.constants import c, h, e
 import numpy as np
 
+class ImageFitWindow(QMainWindow, QtCore.QObject):
 
+    _sigUpdateSpectrum = QtCore.Signal()
 
+    def __init__(self, data, x_range, y_range):
+        """ Create the laser scanner window.
+        """
+        # Get the path to the *.ui file
+        this_dir = os.path.dirname(__file__)
+        ui_file = os.path.join(this_dir, 'ui_image_window.ui')
+
+        # Load it
+        super(ImageWindow, self).__init__()
+        uic.loadUi(ui_file, self)
+
+        with open(os.path.join(this_dir, "style/qdark.qss"), 'r') as stylesheetfile:
+            stylesheet = stylesheetfile.read()
+        self.setStyleSheet(stylesheet)
+
+        self._data = data
+        self._x_range = x_range
+        self._y_range = y_range
+        self._pos1 = (0, 0)
+        self._pos2 = (data.shape[0], data.shape[1])
+        self._i_min = 0
+        self._i_max = data.shape[2]
+
+        self.init_image()
+
+    def init_image(self):
+
+        self.my_colors = ColorScaleInferno()
+        self._image = pg.ImageItem(image=self.image, axisOrder='row-major')
+        self._image.setLookupTable(self.my_colors.lut)
+        self.image_view.addItem(self._image)
+
+        self._colorbar = ColorbarWidget(self._image)
+        self.colorbar.addWidget(self._colorbar)
+
+        self._image_roi = pg.ROI(self._pos1, self._pos2,
+                                 maxBounds=QRectF(QPoint(0, 0), QPoint(self._x_range.size, self._y_range.size)))
+        self._image_roi.addScaleHandle((1, 0), (0, 1))
+        self._image_roi.addScaleHandle((0, 1), (1, 0))
+        self.image_view.addItem(self._image_roi)
+
+        self._image_roi.sigRegionChanged.connect(self._update_roi)
+
+    def _update_roi(self):
+
+        (x1, x2), (y1, y2) = self._image_roi.getArraySlice(self.image, self._image, returnSlice=False)[0]
+
+        if x1 == x2:
+            if x2<self._data.shape[0]:
+                x2 += 1
+            else:
+                x1 -= 1
+        if y1 == y2:
+            if y2 < self._data.shape[1]:
+                y2 += 1
+            else:
+                y1 -= 1
+
+        self._pos1, self._pos2 = (x1, y1), (x2, y2)
+
+        self._sigUpdateSpectrum.emit()
+
+    def _update_image(self):
+        self._i_min, self._i_max = self.sender().roi_index()
+        self.plot()
+
+    @property
+    def image(self):
+        image = self._data[:, :, self._i_min:self._i_max+1].mean(axis=2)
+        return image
+
+    def roi_pos(self):
+        return self._pos1, self._pos2
+
+    def plot(self):
+        self._image.setImage(self.image)
 
 class ImageWindow(QMainWindow, QtCore.QObject):
 
@@ -80,12 +158,12 @@ class ImageWindow(QMainWindow, QtCore.QObject):
             else:
                 y1 -= 1
 
-        self.pos1, self.pos2 = (x1, y1), (x2, y2)
+        self._pos1, self._pos2 = (x1, y1), (x2, y2)
 
         self._sigUpdateSpectrum.emit()
 
-    def _update_image(self, i_min, i_max):
-        self._i_min, self._i_max = i_min, i_max
+    def _update_image(self):
+        self._i_min, self._i_max = self.sender().roi_index()
         self.plot()
 
     @property
@@ -93,12 +171,15 @@ class ImageWindow(QMainWindow, QtCore.QObject):
         image = self._data[:, :, self._i_min:self._i_max+1].mean(axis=2)
         return image
 
+    def roi_pos(self):
+        return self._pos1, self._pos2
+
     def plot(self):
         self._image.setImage(self.image)
 
 class SpectrumWindow(QMainWindow, QtCore.QObject):
 
-    _sigUpdateImage = QtCore.Signal(int)
+    _sigUpdateImage = QtCore.Signal()
     
     def __init__(self, data, wavelength_range):
         """ Create the laser scanner window.
@@ -117,13 +198,8 @@ class SpectrumWindow(QMainWindow, QtCore.QObject):
 
         self._data = data
         self._wavelength_range = wavelength_range
-        self._energy_range = c*h/self._wavelength_range
+        self._energy_range = c*h/e/self._wavelength_range
         self._range_type = "wavelength"
-        self._spectral_roi_wg = []
-        self._spectral_roi_min = []
-        self._spectral_roi_max = []
-        self._spectral_roi = []
-        self._spectral_roi_btn = [self.roi_btn_1, self.roi_btn_2, self.roi_btn_3, self.roi_btn_4]
 
         self._pos1 = (0, 0)
         self._pos2 = (data.shape[0], data.shape[1])
@@ -132,73 +208,71 @@ class SpectrumWindow(QMainWindow, QtCore.QObject):
 
     def init_spectrum(self):
 
-        roi_wg_layout = [self.roi_1_layout, self.roi_2_layout, self.roi_3_layout, self.roi_4_layout]
+        self._spectral_roi = np.array([self.range.min(), self.range.max()])
 
-        for i in range(4):
+        self._roi_min = ScienDSpinBox()
+        self._roi_min.setMinimumWidth(100)
+        self.roi_layout.addWidget(self._roi_min)
 
-            _min = (self.range.max()-self.range.min())/4*i
-            _max = (self.range.max()-self.range.min())/4*(i+1)
+        self._roi_max = ScienDSpinBox()
+        self._roi_max.setMinimumWidth(100)
+        self.roi_layout.addWidget(self._roi_max)
 
-            self._spectral_roi.append( (_min, _max) )
+        self._roi_wg = pg.LinearRegionItem(orientation=pg.LinearRegionItem.Vertical, brush="#fc03032f")
+        self.spectrum_view.addItem(self._roi_wg)
 
-            self._spectral_roi_min.append(ScienDSpinBox())
-            self._spectral_roi_min[i].setSuffix("m")
-            self._spectral_roi_min[i].setMinimumWidth(100)
-            self._spectral_roi_min[i].setMinimum(self.range.min())
-            self._spectral_roi_min[i].setMaximum(self.range.max())
-            self._spectral_roi_min[i].setValue(_min)
-            roi_wg_layout[i].addWidget(self._spectral_roi_min[i])
+        self.range_btn.setText("energy")
 
-            self._spectral_roi_max.append(ScienDSpinBox())
-            self._spectral_roi_max[i].setSuffix("m")
-            self._spectral_roi_max[i].setMinimumWidth(100)
-            self._spectral_roi_max[i].setMinimum(self.range.min())
-            self._spectral_roi_max[i].setMaximum(self.range.max())
-            self._spectral_roi_max[i].setValue(_max)
-            roi_wg_layout[i].addWidget(self._spectral_roi_max[i])
+        self._update_roi_range()
 
-            roi = pg.LinearRegionItem(values=[0, 100], orientation=pg.LinearRegionItem.Vertical,
-                                brush="#fc03032f", bounds=[self.range.min(), self.range.max()])
-            self._spectral_roi_wg.append(roi)
-            self.spectrum_view.addItem(roi)
-
-            if i > 0:
-                roi.hide()
-
-            self._spectral_roi_btn[0].setDown(True)
-
-            self._spectral_roi_wg[i].sigRegionChanged.connect(partial(self._update_roi, False, i))
-            self._spectral_roi_min[i].valueChanged.connect(partial(self._update_roi, True, i))
-            self._spectral_roi_max[i].valueChanged.connect(partial(self._update_roi, True, i))
-            self._spectral_roi_btn[i].clicked.connect(partial(self._show_roi, i))
+        self._roi_wg.sigRegionChanged.connect(partial(self._update_roi, False))
+        self._roi_min.valueChanged.connect(partial(self._update_roi, True))
+        self._roi_max.valueChanged.connect(partial(self._update_roi, True))
+        self.range_btn.clicked.connect(self._change_range_type)
 
         self._plot = self.spectrum_view.plot()
         self.plot()
 
-    def _update_roi(self, spin_widget, index):
+    def _update_roi_range(self):
+
+        _min = self.range.min()
+        _max = self.range.max()
+
+        if self._range_type == "energy":
+            self._roi_min.setSuffix("eV")
+        else:
+            self._roi_min.setSuffix("m")
+        self._roi_min.setMinimum(_min)
+        self._roi_min.setMaximum(_max)
+        self._roi_min.setValue(self._spectral_roi.min())
+
+        if self._range_type == "energy":
+            self._roi_max.setSuffix("eV")
+        else:
+            self._roi_max.setSuffix("m")
+        self._roi_max.setMinimum(_min)
+        self._roi_max.setMaximum(_max)
+        self._roi_max.setValue(self._spectral_roi.max())
+
+        self._roi_wg.setBounds([_min, _max])
+        self._roi_wg.setRegion([self._spectral_roi.min(), self._spectral_roi.max()])
+
+    def _update_roi(self, spin_widget):
 
         if spin_widget:
-            _min, _max = self._spectral_roi_min[index].value(), self._spectral_roi_max[index].value()
-            self._spectral_roi[index] = (_min, _max)
-            self._spectral_roi_wg[index].setRegion([_min, _max])
+            _min, _max = self._roi_min.value(), self._roi_max.value()
+            self._spectral_roi[0] = _min
+            self._spectral_roi[1] = _max
+            self._roi_wg.setRegion([_min, _max])
 
         else:
-            _min, _max = self._spectral_roi_wg[index].getRegion()
-            self._spectral_roi[index] = (_min, _max)
-            self._spectral_roi_min[index].setValue(_min)
-            self._spectral_roi_max[index].setValue(_max)
+            _min, _max = self._roi_wg.getRegion()
+            self._spectral_roi[0] = _min
+            self._spectral_roi[1] = _max
+            self._roi_min.setValue(_min)
+            self._roi_max.setValue(_max)
 
-        self._sigUpdateImage.emit(index)
-
-    def _show_roi(self, index):
-
-        btn_state = self._spectral_roi_wg[index].isVisible()
-        if btn_state:
-            self._spectral_roi_wg[index].hide()
-            self._spectral_roi_btn[index].setDown(False)
-        else:
-            self._spectral_roi_wg[index].show()
-            self._spectral_roi_btn[index].setDown(True)
+        self._sigUpdateImage.emit()
 
     @property
     def range(self):
@@ -212,21 +286,30 @@ class SpectrumWindow(QMainWindow, QtCore.QObject):
         spectrum = self._data[self._pos1[0]:self._pos2[0],self._pos1[1]:self._pos2[1]].mean(axis=(0, 1))
         return spectrum
 
+    def _change_range_type(self):
+        self._spectral_roi = c * h / e / self._spectral_roi[::-1]
+        if self._range_type == "energy":
+            self._range_type = "wavelength"
+            self.range_btn.setText("energy")
+        else:
+            self._range_type = "energy"
+            self.range_btn.setText("wavelength")
+        self.plot()
+        self._update_roi_range()
+
     def _update_spectrum(self):
-        image_wg = self.sender()
-        self._pos1 = image_wg._pos1
-        self._pos2 = image_wg._pos2
+        self._pos1, self._pos2 = self.sender().roi_pos()
         self.plot()
 
     def range_index(self, value):
         index = np.abs(self.range - value).argmin()
         return index
 
-    def roi_index(self, index):
-        _min = self._spectral_roi[index][0]
-        _max = self._spectral_roi[index][1]
-        i_min = self.range_index(_min)
-        i_max = self.range_index(_max)
+    def roi_index(self):
+        i_min = self.range_index(self._spectral_roi[0])
+        i_max = self.range_index(self._spectral_roi[1])
+        if i_min>i_max:
+            i_min, i_max = i_max, i_min
         return i_min, i_max
 
     def plot(self):
@@ -234,16 +317,15 @@ class SpectrumWindow(QMainWindow, QtCore.QObject):
 
 class Hyperspex(QtCore.QObject):
 
+    app = QApplication([])
+
     def __init__(self, data, x_range=None, y_range=None, wavelength_range=None):
 
-        self.app = QApplication([])
         self._spectrum = SpectrumWindow(data, wavelength_range)
-        self._images = []
-        for i in range(4):
-            image = ImageWindow(data, x_range, y_range)
-            self._images.append(image)
-        self._spectrum._sigUpdateImage.connect(self._update_image_manager)
-        self._spectrum._spectral_roi_btn[i].clicked.connect(self._manage_image_windows)
+        self._image = ImageWindow(data, x_range, y_range)
+
+        self._image._sigUpdateSpectrum.connect(self._spectrum._update_spectrum)
+        self._spectrum._sigUpdateImage.connect(self._image._update_image)
 
         self.show()
 
@@ -251,21 +333,7 @@ class Hyperspex(QtCore.QObject):
         """Make window visible and put it above all other windows.
         """
         QMainWindow.show(self._spectrum)
-        self._manage_image_windows()
-        sys.exit(self.app.exec_())
-
-    def _manage_image_windows(self):
-        for i in range(4):
-            if self._spectrum._spectral_roi_btn[i].isDown():
-                QMainWindow.show(self._images[i])
-            else:
-                QMainWindow.hide(self._images[i])
-
-    def _update_image_manager(self, index):
-        i_min, i_max = self._spectrum.roi_index(index)
-        self._images[index]._update_image(i_min, i_max)
-
-
+        QMainWindow.show(self._image)
 
 def load_spim(filepath):
     with np.load(filepath) as data:
@@ -284,9 +352,11 @@ def load_spim(filepath):
     }
 
 if __name__ == "__main__":
-    dirpath = r"/Users/adrien/Desktop/hBN/Samples/LCPNO/Experimental data/Flake S2/16_01_2021/20210116-1842-56_xy.npz"
+    dirpath = r"C:\Users\L2C_USER\Desktop\Samples\LPCNO\Experimental data\S2\20210118\20210118-1752-51_xy.npz"
     spim_dict = load_spim(dirpath)
-    hyperspex = Hyperspex(spim_dict["spim"]-198, spim_dict["x"], spim_dict["y"], spim_dict["wavelength"])
+    hyperspex1 = Hyperspex(spim_dict["spim"]-190, spim_dict["x"], spim_dict["y"], spim_dict["wavelength"])
+    hyperspex2 = Hyperspex(spim_dict["spim"]-190, spim_dict["x"], spim_dict["y"], spim_dict["wavelength"])
+    sys.exit(Hyperspex.app.exec_())
     # spectrum = SpectrumWindow(spim_dict["spim"], spim_dict["wavelength"])
     # image = ImageWindow(spim_dict["spim"], spim_dict["x"], spim_dict["y"])
     # spectrum.show()
