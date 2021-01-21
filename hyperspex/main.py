@@ -11,6 +11,7 @@ from qtpy import QtCore
 from hyperspex.style.colordefs import ColorScaleInferno
 from hyperspex.gui.colorbar.colorbar import ColorbarWidget
 from hyperspex.gui.scientific_spinbox.scientific_spinbox import ScienDSpinBox
+from lmfit import Model, Parameters
 
 from scipy.constants import c, h, e
 import numpy as np
@@ -27,7 +28,7 @@ class ImageFitWindow(QMainWindow, QtCore.QObject):
         ui_file = os.path.join(this_dir, 'ui_image_window.ui')
 
         # Load it
-        super(ImageWindow, self).__init__()
+        super(ImageFitWindow, self).__init__()
         uic.loadUi(ui_file, self)
 
         with open(os.path.join(this_dir, "style/qdark.qss"), 'r') as stylesheetfile:
@@ -41,6 +42,8 @@ class ImageFitWindow(QMainWindow, QtCore.QObject):
         self._pos2 = (data.shape[0], data.shape[1])
         self._i_min = 0
         self._i_max = data.shape[2]
+
+        self._image_fit = np.zeros((self._data.shape[0], self._data.shape[1], 4))
 
         self.init_image()
 
@@ -82,13 +85,13 @@ class ImageFitWindow(QMainWindow, QtCore.QObject):
         self._sigUpdateSpectrum.emit()
 
     def _update_image(self):
-        self._i_min, self._i_max = self.sender().roi_index()
+        self._image_fit = self.sender().fit_image()
         self.plot()
 
     @property
     def image(self):
-        image = self._data[:, :, self._i_min:self._i_max+1].mean(axis=2)
-        return image
+        print(self._image_fit[:,:,2])
+        return self._image_fit[:,:,0]
 
     def roi_pos(self):
         return self._pos1, self._pos2
@@ -180,7 +183,8 @@ class ImageWindow(QMainWindow, QtCore.QObject):
 class SpectrumWindow(QMainWindow, QtCore.QObject):
 
     _sigUpdateImage = QtCore.Signal()
-    
+    _sigUpdateImageFit = QtCore.Signal()
+
     def __init__(self, data, wavelength_range):
         """ Create the laser scanner window.
         """
@@ -203,6 +207,9 @@ class SpectrumWindow(QMainWindow, QtCore.QObject):
 
         self._pos1 = (0, 0)
         self._pos2 = (data.shape[0], data.shape[1])
+
+        self._gaussian_model = Model(self.gaussian)
+        self._gaussian_model.nan_policy = 'omit'
 
         self.init_spectrum()
 
@@ -229,9 +236,14 @@ class SpectrumWindow(QMainWindow, QtCore.QObject):
         self._roi_min.valueChanged.connect(partial(self._update_roi, True))
         self._roi_max.valueChanged.connect(partial(self._update_roi, True))
         self.range_btn.clicked.connect(self._change_range_type)
+        self.fit_btn.clicked.connect(self.start_fit)
 
         self._plot = self.spectrum_view.plot()
         self.plot()
+
+    def start_fit(self):
+
+        self._sigUpdateImageFit.emit()
 
     def _update_roi_range(self):
 
@@ -315,6 +327,40 @@ class SpectrumWindow(QMainWindow, QtCore.QObject):
     def plot(self):
         self._plot.setData(self.range, self.spectrum)
 
+    def gaussian(self, x, x0, w, A, B):
+        return A * np.exp(-(x - x0) ** 2 / w) + B
+
+    def gaussian_fit(self, xdata, ydata, params):
+        fit = self._gaussian_model.fit(ydata, params, x=xdata, max_nfev=20)
+        return fit
+
+    def fit_image(self):
+
+        data_shape = self._data.shape
+        i_min, i_max = self.roi_index()
+        xdata = self.range[i_min:i_max]
+        fit_image = np.zeros((data_shape[0], data_shape[1], 4))
+
+        for i in range(data_shape[0]):
+            for j in range(data_shape[1]):
+                ydata = self._data[i, j, i_min:i_max]
+                params = self.get_fit_params(xdata, ydata)
+                fit = self.gaussian_fit(xdata, ydata, params).best_values.values()
+                fit_image[i, j, :] = np.array(list(fit))
+
+        return fit_image
+
+    def get_fit_params(self, xdata, ydata):
+
+        params = Parameters()
+        params.add('x0', value=xdata[(ydata - ydata.max()).argmin()])
+        params.add('w', min = (xdata.max()-xdata.min())*1e-3,
+                   value = (xdata.max()-xdata.min())/2)
+        params.add('A', min = 0, value=xdata.max())
+        params.add('B', min=0, value=xdata.min())
+
+        return params
+
 class Hyperspex(QtCore.QObject):
 
     app = QApplication([])
@@ -322,10 +368,11 @@ class Hyperspex(QtCore.QObject):
     def __init__(self, data, x_range=None, y_range=None, wavelength_range=None):
 
         self._spectrum = SpectrumWindow(data, wavelength_range)
-        self._image = ImageWindow(data, x_range, y_range)
+        self._image = ImageFitWindow(data, x_range, y_range)
 
         self._image._sigUpdateSpectrum.connect(self._spectrum._update_spectrum)
-        self._spectrum._sigUpdateImage.connect(self._image._update_image)
+        # self._spectrum._sigUpdateImage.connect(self._image._update_image)
+        self._spectrum._sigUpdateImageFit.connect(self._image._update_image)
 
         self.show()
 
@@ -352,10 +399,9 @@ def load_spim(filepath):
     }
 
 if __name__ == "__main__":
-    dirpath = r"C:\Users\L2C_USER\Desktop\Samples\LPCNO\Experimental data\S2\20210118\20210118-1752-51_xy.npz"
+    dirpath = r"/Users/adrien/Desktop/hBN/Samples/POSTECH/Experimental Data/sample_3_1/spim/15_11_2020/20201116-1756-11_sample_3_1_007K_1962ang_135uW_100um_1200rpm_220nm_40x80s_08um.npz"
     spim_dict = load_spim(dirpath)
     hyperspex1 = Hyperspex(spim_dict["spim"]-190, spim_dict["x"], spim_dict["y"], spim_dict["wavelength"])
-    hyperspex2 = Hyperspex(spim_dict["spim"]-190, spim_dict["x"], spim_dict["y"], spim_dict["wavelength"])
     sys.exit(Hyperspex.app.exec_())
     # spectrum = SpectrumWindow(spim_dict["spim"], spim_dict["wavelength"])
     # image = ImageWindow(spim_dict["spim"], spim_dict["x"], spim_dict["y"])
