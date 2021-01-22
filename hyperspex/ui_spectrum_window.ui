@@ -47,6 +47,9 @@
        </spacer>
       </item>
       <item>
+       <widget class="QComboBox" name="fit_function"/>
+      </item>
+      <item>
        <widget class="QPushButton" name="fit_btn">
         <property name="text">
          <string>Fit</string>
@@ -70,7 +73,7 @@
      <x>0</x>
      <y>0</y>
      <width>800</width>
-     <height>24</height>
+     <height>21</height>
     </rect>
    </property>
   </widget>
