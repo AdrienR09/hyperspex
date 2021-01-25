@@ -8,7 +8,7 @@ import pyqtgraph as pg
 from qtpy import uic
 from qtpy import QtCore
 from qtpy.QtCore import Qt, QRectF, QPoint
-from hyperspex.style.colordefs import ColorScaleInferno
+from hyperspex.style.colordefs import ColorScaleInferno, QudiPalette
 from hyperspex.gui.colorbar.colorbar import ColorbarWidget
 from hyperspex.gui.scientific_spinbox.scientific_spinbox import ScienDSpinBox
 from lmfit import Model, Parameters
@@ -199,7 +199,7 @@ class SpectrumWindow(QMainWindow, QtCore.QObject):
         self.fit_btn.clicked.connect(self._sigUpdateImageFit.emit)
 
         self._plot = self.spectrum_view.plot()
-        self._plot_fit = self.spectrum_view.plot()
+        self._plot_fit = self.spectrum_view.plot(pen=QudiPalette.c2)
         self.plot()
 
     def set_data(self, data):
@@ -286,6 +286,7 @@ class SpectrumWindow(QMainWindow, QtCore.QObject):
 
     def _update_spectrum(self):
         self._pos1, self._pos2 = self.sender().roi_pos()
+        self.plot_fit()
         self.plot()
 
     def range_index(self, value):
@@ -318,7 +319,7 @@ class SpectrumWindow(QMainWindow, QtCore.QObject):
         return amplitude * width / ( width**2 + (x - peak_position)**2 ) + background
 
     def _fit_spectrum(self, xdata, ydata, params):
-        fit = self._model_fit.fit(ydata, params, x=xdata, max_nfev=200)
+        fit = self._model_fit.fit(ydata, params, x=xdata, max_nfev=400)
         return fit
 
     def fit_image(self):
@@ -348,10 +349,10 @@ class SpectrumWindow(QMainWindow, QtCore.QObject):
 
         params = Parameters()
         params.add('peak_position', value=xdata[(ydata - ydata.max()).argmin()])
-        params.add('width', min = (xdata.max()-xdata.min())*1e-3,
-                   value = (xdata.max()-xdata.min())/2)
+        params.add('width', min = np.abs(xdata.max()-xdata.min())*1e-4,
+                   value = np.abs(xdata.max()-xdata.min())/2)
         params.add('amplitude', min = 0, value=xdata.max())
-        params.add('background', min=0, value=xdata.min())
+        params.add('background', min = 0, value=xdata.min())
 
         return params
 
@@ -405,8 +406,8 @@ def load_spim(filepath):
     }
 
 if __name__ == "__main__":
-    dirpath = r"C:\Users\L2C_USER\Desktop\Samples\LPCNO\Experimental data\S1\21012021\20210121-0930-53_xy.npz"
-    #dirpath = r"C:\Users\L2C_USER\Desktop\Samples\POSTECH\Experimental Data\sample_3_1\spim\20201112-1120-06_sample_3_1_007K_1962ang_194uW_100um_1200rpm_220nm_60x20s_12um.npz"
+    # dirpath = r"C:\Users\L2C_USER\Desktop\Samples\LPCNO\Experimental data\S1\21012021\20210121-0930-53_xy.npz"
+    dirpath = "/Users/adrien/Desktop/hBN/Samples/LCPNO/Experimental data/Flake S2/16_01_2021/20210116-1842-56_xy.npz"
     spim_dict = load_spim(dirpath)
     hyperspex = Hyperspex(spim_dict["spim"][:,:-1], spim_dict["x"], spim_dict["y"], spim_dict["wavelength"])
     sys.exit(Hyperspex.app.exec_())
