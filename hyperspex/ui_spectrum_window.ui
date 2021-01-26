@@ -28,8 +28,11 @@
       </property>
      </widget>
     </item>
-    <item row="0" column="1">
-     <layout class="QVBoxLayout" name="verticalLayout">
+    <item row="1" column="2">
+     <layout class="QHBoxLayout" name="horizontalLayout">
+      <item>
+       <layout class="QHBoxLayout" name="roi_layout"/>
+      </item>
       <item>
        <widget class="QPushButton" name="range_btn">
         <property name="text">
@@ -38,57 +41,27 @@
        </widget>
       </item>
       <item>
-       <spacer name="verticalSpacer">
+       <spacer name="horizontalSpacer">
         <property name="orientation">
-         <enum>Qt::Vertical</enum>
+         <enum>Qt::Horizontal</enum>
         </property>
         <property name="sizeHint" stdset="0">
          <size>
-          <width>20</width>
-          <height>40</height>
+          <width>40</width>
+          <height>20</height>
          </size>
         </property>
        </spacer>
       </item>
       <item>
-       <widget class="QPushButton" name="roi_btn_1">
+       <widget class="QComboBox" name="fit_function"/>
+      </item>
+      <item>
+       <widget class="QPushButton" name="fit_btn">
         <property name="text">
-         <string>1</string>
+         <string>Fit</string>
         </property>
        </widget>
-      </item>
-      <item>
-       <layout class="QHBoxLayout" name="roi_1_layout"/>
-      </item>
-      <item>
-       <widget class="QPushButton" name="roi_btn_2">
-        <property name="text">
-         <string>2</string>
-        </property>
-       </widget>
-      </item>
-      <item>
-       <layout class="QHBoxLayout" name="roi_2_layout"/>
-      </item>
-      <item>
-       <widget class="QPushButton" name="roi_btn_3">
-        <property name="text">
-         <string>3</string>
-        </property>
-       </widget>
-      </item>
-      <item>
-       <layout class="QHBoxLayout" name="roi_3_layout"/>
-      </item>
-      <item>
-       <widget class="QPushButton" name="roi_btn_4">
-        <property name="text">
-         <string>4</string>
-        </property>
-       </widget>
-      </item>
-      <item>
-       <layout class="QHBoxLayout" name="roi_4_layout"/>
       </item>
      </layout>
     </item>
