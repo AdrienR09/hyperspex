@@ -154,6 +154,7 @@ class SpectrumWindow(QMainWindow, QtCore.QObject):
         self._wavelength_range = wavelength_range
         self._energy_range = c*h/e/self._wavelength_range
         self._range_type = "energy"
+        self._fit_range = None
 
         self._pos1 = (0, 0)
         self._pos2 = (data.shape[0], data.shape[1])
@@ -259,9 +260,9 @@ class SpectrumWindow(QMainWindow, QtCore.QObject):
     def range_fit(self):
         i_min, i_max = self._fit_range
         if self._range_type == "energy":
-            return self._energy_range[i_min:i_max]
+            return self._energy_range[i_min:i_max+1]
         else:
-            return self._wavelength_range[i_min:i_max]
+            return self._wavelength_range[i_min:i_max+1]
 
     @property
     def spectrum(self):
@@ -286,7 +287,8 @@ class SpectrumWindow(QMainWindow, QtCore.QObject):
 
     def _update_spectrum(self):
         self._pos1, self._pos2 = self.sender().roi_pos()
-        self.plot_fit()
+        if self._fit_range:
+            self.plot_fit()
         self.plot()
 
     def range_index(self, value):
@@ -358,9 +360,9 @@ class SpectrumWindow(QMainWindow, QtCore.QObject):
 
 class Hyperspex(QtCore.QObject):
 
-    app = QApplication([])
-
     def __init__(self, data, x_range, y_range, wavelength_range):
+
+        self.app = QApplication([])
 
         self._data = data - data.min()
         self._x_range = x_range
@@ -375,6 +377,7 @@ class Hyperspex(QtCore.QObject):
         self._spectrum._sigUpdateImageFit.connect(self._image._update_image_fit)
 
         self.show()
+        self.start_app()
 
     def show(self):
         """Make window visible and put it above all other windows.
@@ -387,6 +390,9 @@ class Hyperspex(QtCore.QObject):
         self._data = self._data - background
         self._image.set_data(self._data)
         self._spectrum.set_data(self._data)
+
+    def start_app(self):
+        sys.exit(self.app.exec_())
 
 
 def load_spim(filepath):
@@ -407,7 +413,6 @@ def load_spim(filepath):
 
 if __name__ == "__main__":
     # dirpath = r"C:\Users\L2C_USER\Desktop\Samples\LPCNO\Experimental data\S1\21012021\20210121-0930-53_xy.npz"
-    dirpath = "/Users/adrien/Desktop/hBN/Samples/LCPNO/Experimental data/Flake S2/16_01_2021/20210116-1842-56_xy.npz"
+    dirpath = "/Users/adrien/Documents/Samples/LPCNO/Flake S2/Experimental data/16_01_2021/20210116-1842-56_xy.npz"
     spim_dict = load_spim(dirpath)
     hyperspex = Hyperspex(spim_dict["spim"][:,:-1], spim_dict["x"], spim_dict["y"], spim_dict["wavelength"])
-    sys.exit(Hyperspex.app.exec_())

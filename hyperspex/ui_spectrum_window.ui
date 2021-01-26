@@ -34,6 +34,13 @@
        <layout class="QHBoxLayout" name="roi_layout"/>
       </item>
       <item>
+       <widget class="QPushButton" name="range_btn">
+        <property name="text">
+         <string>PushButton</string>
+        </property>
+       </widget>
+      </item>
+      <item>
        <spacer name="horizontalSpacer">
         <property name="orientation">
          <enum>Qt::Horizontal</enum>
@@ -56,13 +63,6 @@
         </property>
        </widget>
       </item>
-      <item>
-       <widget class="QPushButton" name="range_btn">
-        <property name="text">
-         <string>PushButton</string>
-        </property>
-       </widget>
-      </item>
      </layout>
     </item>
    </layout>
@@ -73,7 +73,7 @@
      <x>0</x>
      <y>0</y>
      <width>800</width>
-     <height>21</height>
+     <height>24</height>
     </rect>
    </property>
   </widget>
