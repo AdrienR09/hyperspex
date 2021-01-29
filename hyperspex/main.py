@@ -180,11 +180,16 @@ class SpectrumWindow(QMainWindow, QtCore.QObject):
 
         self._model_fit = Model(self.lorentzian)
         self._model_fit.nan_policy = 'omit'
+        self.fit_Nmax.setMinimum(1)
+        self.fit_Nmax.setMaximum(1e6)
+        self.fit_Nmax.setValue(400)
 
         self.model_dict = {'Lorentzian': self.lorentzian,
-                            'Gaussian': self.gaussian}
+                            'Gaussian': self.gaussian,
+                            'Two Gaussian': self.two_gaussian}
         self.params_dict = {'Lorentzian': self.get_fit_params,
-                            'Gaussian': self.get_fit_params}
+                            'Gaussian': self.get_fit_params,
+                            'Two Gaussian': self.get_fit_params}
 
         for k, v in self.model_dict.items():
             self.fit_function.addItem(k, v)
@@ -212,6 +217,9 @@ class SpectrumWindow(QMainWindow, QtCore.QObject):
 
         _min = self.range.min()
         _max = self.range.max()
+
+        if _min>_max:
+            _min, _max = _max, _min
 
         if self._range_type == "energy":
             self._roi_min.setSuffix("eV")
@@ -315,13 +323,18 @@ class SpectrumWindow(QMainWindow, QtCore.QObject):
         self.fit_function.addItem(name, model_func)
 
     def gaussian(self, x, peak_position, width, amplitude, background):
-        return amplitude * np.exp(-(x - peak_position) ** 2 / width) + background
+        return amplitude * np.exp(-((x - peak_position) / (2 * width) ) ** 2) + background
+
+    def two_gaussian(self, x, peak_position_1, peak_position_2, width_1, width_2, amplitude_1, amplitude_2, background):
+        gaussian_1 = amplitude_1 * np.exp(-((x - peak_position_1) / (2 * width_1) ) ** 2)
+        gaussian_2 = amplitude_2 * np.exp(-((x - peak_position_2) / (2 * width_2) ) ** 2)
+        return gaussian_1 + gaussian_2 + background
 
     def lorentzian(self, x, peak_position, width, amplitude, background):
         return amplitude * width / ( width**2 + (x - peak_position)**2 ) + background
 
     def _fit_spectrum(self, xdata, ydata, params):
-        fit = self._model_fit.fit(ydata, params, x=xdata, max_nfev=400)
+        fit = self._model_fit.fit(ydata, params, x=xdata, max_nfev=self.fit_Nmax.value())
         return fit
 
     def fit_image(self):
@@ -329,9 +342,9 @@ class SpectrumWindow(QMainWindow, QtCore.QObject):
         data_shape = self._data.shape
         i_min, i_max = self.roi_index()
         self._fit_range = (i_min, i_max)
-        xdata = self.range[i_min:i_max]
+        xdata = self.range[i_min:i_max+1]
         fit_image = np.zeros((data_shape[0], data_shape[1], 4))
-        self._data_fit = np.zeros((data_shape[0], data_shape[1], i_max - i_min))
+        self._data_fit = np.zeros((data_shape[0], data_shape[1], i_max - i_min + 1))
 
         self._model_fit = Model(self.fit_function.currentData())
         params_func = self.params_dict[self.fit_function.currentText()]
@@ -339,7 +352,7 @@ class SpectrumWindow(QMainWindow, QtCore.QObject):
 
         for i in range(data_shape[0]):
             for j in range(data_shape[1]):
-                ydata = self._data[i, j, i_min:i_max]
+                ydata = self._data[i, j, i_min:i_max+1]
                 params = params_func(xdata, ydata)
                 fit = self._fit_spectrum(xdata, ydata, params)
                 self._data_fit[i, j, :] = fit.best_fit
@@ -350,11 +363,11 @@ class SpectrumWindow(QMainWindow, QtCore.QObject):
     def get_fit_params(self, xdata, ydata):
 
         params = Parameters()
-        params.add('peak_position', value=xdata[(ydata - ydata.max()).argmin()])
+        params.add('peak_position', min=xdata.min(), max=xdata.max(), value=xdata[(ydata - ydata.max()).argmin()])
         params.add('width', min = np.abs(xdata.max()-xdata.min())*1e-4,
                    value = np.abs(xdata.max()-xdata.min())/2)
-        params.add('amplitude', min = 0, value=xdata.max())
-        params.add('background', min = 0, value=xdata.min())
+        params.add('amplitude', min=0, value=ydata.max())
+        params.add('background', min = 0, value=ydata.min())
 
         return params
 
@@ -413,6 +426,6 @@ def load_spim(filepath):
 
 if __name__ == "__main__":
     # dirpath = r"C:\Users\L2C_USER\Desktop\Samples\LPCNO\Experimental data\S1\21012021\20210121-0930-53_xy.npz"
-    dirpath = "/Users/adrien/Documents/Samples/LPCNO/Flake S2/Experimental data/16_01_2021/20210116-1842-56_xy.npz"
+    dirpath = r"C:\Users\L2C_USER\Desktop\Samples\TEM grids\Experimental Data\SiO2\20201029-1204-34_spim_TEM_SiO2_007K_1934ang_50uW_100um_300rpm_450nm_30x1s.npz"
     spim_dict = load_spim(dirpath)
-    hyperspex = Hyperspex(spim_dict["spim"][:,:-1], spim_dict["x"], spim_dict["y"], spim_dict["wavelength"])
+    hyperspex = Hyperspex(spim_dict["spim"]-300.5, spim_dict["x"], spim_dict["y"], spim_dict["wavelength"])
