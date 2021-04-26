@@ -22,9 +22,9 @@ top-level directory of this distribution and at <https://github.com/Ulm-IQO/qudi
 import os
 from functools import partial
 
-from style.colordefs import ColorScaleInferno, ColorScaleMagma
-from gui.scientific_spinbox.scientific_spinbox import ScienDSpinBox, ScienSpinBox
-from gui.colorbar.colorbar_widget import ColorBar
+from hyperspex.style.colordefs import ColorScaleInferno, ColorScaleMagma
+from hyperspex.gui.scientific_spinbox.scientific_spinbox import ScienDSpinBox, ScienSpinBox
+from hyperspex.gui.colorbar.colorbar_widget import ColorBar
 
 from qtpy import QtWidgets
 from qtpy import uic

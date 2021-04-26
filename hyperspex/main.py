@@ -3,19 +3,20 @@ import sys
 import os
 
 from functools import partial
+from lmfit import Model, Parameters
+from scipy.constants import c, h, e
+import despike
+import numpy as np
+
 from qtpy.QtWidgets import QApplication, QMainWindow
 import pyqtgraph as pg
 from qtpy import uic
 from qtpy import QtCore
 from qtpy.QtCore import Qt, QRectF, QPoint
-from style.colordefs import ColorScaleInferno, QudiPalette
-from gui.colorbar.colorbar import ColorbarWidget
-from gui.scientific_spinbox.scientific_spinbox import ScienDSpinBox
-from lmfit import Model, Parameters
-from nexusformat.nexus import *
-from scipy.constants import c, h, e
-import despike
-import numpy as np
+
+from hyperspex.style.colordefs import ColorScaleInferno, QudiPalette
+from hyperspex.gui.colorbar.colorbar import ColorbarWidget
+from hyperspex.gui.scientific_spinbox.scientific_spinbox import ScienDSpinBox
 
 
 class ImageWindow(QMainWindow, QtCore.QObject):
@@ -425,7 +426,7 @@ def load_spim(filepath, remove_spike=False):
                 img = np.array(data[key]).reshape(y.size, x.size)
             spim[i] = img
             i+=1
-        data.files = np.array([d[:10].replace('nm', 'e-9') for d in data.files])
+        data.files = np.array([d.replace('nm', 'e-9') for d in data.files])
         wavelength = np.array(data.files[3:], dtype=float)
     return {
         "x":x,
@@ -436,34 +437,7 @@ def load_spim(filepath, remove_spike=False):
 
 if __name__ == "__main__":
     import pandas as pd
-    dirpath = r"/Users/adrien/Documents/Samples/POSTECH/Experimental Data/sample_A1/01042021/20210402-0817-15_xy.npz"
-    spim_dict = load_spim(dirpath, remove_spike=True)
-    hyperspex = Hyperspex(spim_dict["spim"][:,:,:2048], spim_dict["x"], spim_dict["y"], spim_dict["wavelength"][:2048])
-    hyperspex2 = Hyperspex(spim_dict["spim"][:,:,2048:], spim_dict["x"], spim_dict["y"], spim_dict["wavelength"][2048:])
-    x = np.linspace(0, 2048, 2048)
-    y = -0.48 / 2000 * x + 1.35
-    s1 = (spim_dict["spim"][:, :, :2048] - spim_dict["spim"][:, :, :2048].min()) * y + 1
-    s2 = (spim_dict["spim"][:, :, 2048:] - spim_dict["spim"][:, :, 2048:].min()) + 1
-    s2 *= s1.mean((0, 1)) / s2.mean((0, 1))
-    contrast = (s2-s1) / (s2 + s1)
-    hyperspex3 = Hyperspex(contrast, spim_dict["x"], spim_dict["y"],
-                           spim_dict["wavelength"][2048:], remove_background=False)
+    dirpath = r"/Users/adrien/Documents/Samples/KSU/C33/20210421-1037-58_xy.npz"
+    spim_dict = load_spim(dirpath, remove_spike=False)
+    hyperspex = Hyperspex(spim_dict["spim"], spim_dict["x"], spim_dict["y"], spim_dict["wavelength"])
     Hyperspex.start_app()
-
-    """
-    df = pd.read_csv("/Users/adrien/Desktop/HBN DOPED MG/Experimental data/Raman/Avec correction/Zone de map avec traitement pic cosmiques.txt",
-                     delimiter="\t")
-    spim_dict = {}
-    spim_dict["x"]  = np.unique(df["Unnamed: 1"].values)
-    spim_dict["y"] = np.unique(df["Unnamed: 0"].values)
-    spim_dict["wavelength"] = 1/np.array(df.columns.values[2:], dtype=float)*1e-2
-    spim_dict["spim"] = df.values[:, 2:].reshape((23, 56, 1022))
-
-    a = nxload('/Users/adrien/Desktop/HBN DOPED MG/Experimental data/ARPES/hBN_2020-09-16_15-51-06.nxs', mode='rw')
-    spim_dict = {}
-    spim_dict["spim"] = np.array(a.salsaentry_1_1.scan_data.data_12[:]).mean(2)
-    spim_dict["x"] = np.array(a.salsaentry_1_1.scan_data.trajectory_1_1.data)
-    spim_dict["y"] = np.array(a.salsaentry_1_1.scan_data.trajectory_2_1.data)
-    spim_dict["wavelength"] = np.arange(1, 890)
-    #hyperspex = Hyperspex(spim_dict["spim"], spim_dict["x"], spim_dict["y"], spim_dict["wavelength"])
-    Hyperspex.start_app()"""
