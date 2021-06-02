@@ -3,18 +3,20 @@ import sys
 import os
 
 from functools import partial
+from lmfit import Model, Parameters
+from scipy.constants import c, h, e
+import despike
+import numpy as np
+
 from qtpy.QtWidgets import QApplication, QMainWindow
 import pyqtgraph as pg
 from qtpy import uic
 from qtpy import QtCore
 from qtpy.QtCore import Qt, QRectF, QPoint
+
 from hyperspex.style.colordefs import ColorScaleInferno, QudiPalette
 from hyperspex.gui.colorbar.colorbar import ColorbarWidget
 from hyperspex.gui.scientific_spinbox.scientific_spinbox import ScienDSpinBox
-from lmfit import Model, Parameters
-
-from scipy.constants import c, h, e
-import numpy as np
 
 
 class ImageWindow(QMainWindow, QtCore.QObject):
@@ -373,11 +375,18 @@ class SpectrumWindow(QMainWindow, QtCore.QObject):
 
 class Hyperspex(QtCore.QObject):
 
-    def __init__(self, data, x_range, y_range, wavelength_range):
+    app = QApplication([])
 
-        self.app = QApplication([])
+    @classmethod
+    def start_app(cls):
+        sys.exit(cls.app.exec_())
 
-        self._data = data - data.min()
+    def __init__(self, data, x_range, y_range, wavelength_range, remove_background=True):
+
+        if remove_background:
+            self._data = data - data.min()
+        else:
+            self._data = data
         self._x_range = x_range
         self._y_range = y_range
         self._wavelength_range = wavelength_range
@@ -390,7 +399,6 @@ class Hyperspex(QtCore.QObject):
         self._spectrum._sigUpdateImageFit.connect(self._image._update_image_fit)
 
         self.show()
-        self.start_app()
 
     def show(self):
         """Make window visible and put it above all other windows.
@@ -404,28 +412,32 @@ class Hyperspex(QtCore.QObject):
         self._image.set_data(self._data)
         self._spectrum.set_data(self._data)
 
-    def start_app(self):
-        sys.exit(self.app.exec_())
 
-
-def load_spim(filepath):
+def load_spim(filepath, remove_spike=False):
     with np.load(filepath) as data:
         x = np.unique(data['x'])
         y = np.unique(data['y'])
-        wavelength = np.array(data.files[3:], dtype=float)
-        spim = []
+        spim = np.zeros((np.array(data.files[3:]).size, y.size, x.size))
+        i=0
         for key in data.files[3:]:
-            spim.append(data[key])
-    spim = np.array(spim).reshape(2048, y.size, x.size).T
+            if remove_spike:
+                img = despike.clean(np.array(data[key]).reshape(y.size, x.size))
+            else:
+                img = np.array(data[key]).reshape(y.size, x.size)
+            spim[i] = img
+            i+=1
+        data.files = np.array([d.replace('nm', 'e-9') for d in data.files])
+        wavelength = np.array(data.files[3:], dtype=float)
     return {
         "x":x,
         "y":y,
         "wavelength":wavelength,
-        "spim":spim,
+        "spim":spim.T,
     }
 
 if __name__ == "__main__":
-    # dirpath = r"C:\Users\L2C_USER\Desktop\Samples\LPCNO\Experimental data\S1\21012021\20210121-0930-53_xy.npz"
-    dirpath = r"C:\Users\L2C_USER\Desktop\Samples\TEM grids\Experimental Data\SiO2\20201029-1204-34_spim_TEM_SiO2_007K_1934ang_50uW_100um_300rpm_450nm_30x1s.npz"
-    spim_dict = load_spim(dirpath)
-    hyperspex = Hyperspex(spim_dict["spim"]-300.5, spim_dict["x"], spim_dict["y"], spim_dict["wavelength"])
+    import pandas as pd
+    dirpath = r"/Users/adrien/Documents/Samples/KSU/C33/20210421-1037-58_xy.npz"
+    spim_dict = load_spim(dirpath, remove_spike=False)
+    hyperspex = Hyperspex(spim_dict["spim"], spim_dict["x"], spim_dict["y"], spim_dict["wavelength"])
+    Hyperspex.start_app()
