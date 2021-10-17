@@ -1,22 +1,27 @@
-import setuptools
+from setuptools import setup
 
-with open("README.md", "r", encoding="utf-8") as fh:
-    long_description = fh.read()
+setup(
+    name='hyperspex',
+    version='1.0.1',
+    description='A Python package to help 3D hyperspectral data exploration through a Graphical User Interface.',
+    url='https://github.com/AdrienR09/hyperspex/',
+    author='Adrien Rousseau',
+    author_email='adrien.rousseau@umontpellier.fr',
+    license='BSD 2-clause',
+    packages=[],
+    install_requires=['mpi4py>=2.0',
+                      'numpy',
+                      ],
 
-setuptools.setup(
-    name="hyperspex", # Replace with your own username
-    version="0.0.2",
-    author="Adrien Rousseau",
-    author_email="adrienrousseau@gmail.com",
-    description="This package allow you to explore hyperspectral data easly.",
-    long_description=long_description,
-    long_description_content_type="text/markdown",
-    url="https://github.com/AdrienR09/hyperspex",
-    packages=setuptools.find_packages(),
     classifiers=[
-        "Programming Language :: Python :: 3",
-        "License :: OSI Approved :: MIT License",
-        "Operating System :: OS Independent",
+        'Development Status :: 1 - Planning',
+        'Intended Audience :: Science/Research',
+        'License :: OSI Approved :: BSD License',
+        'Operating System :: POSIX :: Linux',
+        'Programming Language :: Python :: 2',
+        'Programming Language :: Python :: 2.7',
+        'Programming Language :: Python :: 3',
+        'Programming Language :: Python :: 3.4',
+        'Programming Language :: Python :: 3.5',
     ],
-    python_requires='>=3.6',
 )

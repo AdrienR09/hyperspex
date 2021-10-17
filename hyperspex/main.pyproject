@@ -1,7 +1,0 @@
-{
-<<<<<<< HEAD
-    "files": ["main.py","ui_spectrum_view.ui","ui_spectrum_window.ui"]
-=======
-    "files": ["main.py","ui_spectrum_window.ui","ui_spectrum_window.ui"]
->>>>>>> main
-}
