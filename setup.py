@@ -2,11 +2,7 @@ from setuptools import setup
 
 setup(
     name='hyperspex',
-<<<<<<< HEAD
     version='1.0.1',
-=======
-    version='0.1.0',
->>>>>>> main
     description='A Python package to help 3D hyperspectral data exploration through a Graphical User Interface.',
     url='https://github.com/AdrienR09/hyperspex/',
     author='Adrien Rousseau',
