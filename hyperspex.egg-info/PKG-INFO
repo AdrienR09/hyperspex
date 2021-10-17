@@ -1,6 +1,10 @@
 Metadata-Version: 1.1
 Name: hyperspex
+<<<<<<< HEAD
 Version: 1.0.1
+=======
+Version: 0.1.0
+>>>>>>> main
 Summary: A Python package to help 3D hyperspectral data exploration through a Graphical User Interface.
 Home-page: https://github.com/AdrienR09/hyperspex/
 Author: Adrien Rousseau
