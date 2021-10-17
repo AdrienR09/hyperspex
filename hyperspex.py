@@ -18,7 +18,6 @@ from hyperspex.style.colordefs import ColorScaleInferno, QudiPalette
 from hyperspex.gui.colorbar.colorbar import ColorbarWidget
 from hyperspex.gui.scientific_spinbox.scientific_spinbox import ScienDSpinBox
 
-
 class ImageWindow(QMainWindow, QtCore.QObject):
 
     _sigUpdateSpectrum = QtCore.Signal()
@@ -28,13 +27,13 @@ class ImageWindow(QMainWindow, QtCore.QObject):
         """
         # Get the path to the *.ui file
         this_dir = os.path.dirname(__file__)
-        ui_file = os.path.join(this_dir, 'ui_image_window.ui')
+        ui_file = os.path.join(this_dir, 'gui/ui_image_window.ui')
 
         # Load it
         super(ImageWindow, self).__init__()
         uic.loadUi(ui_file, self)
 
-        with open(os.path.join(this_dir, "style/qdark.qss"), 'r') as stylesheetfile:
+        with open(os.path.join(this_dir, "gui/style/qdark.qss"), 'r') as stylesheetfile:
             stylesheet = stylesheetfile.read()
         self.setStyleSheet(stylesheet)
 
@@ -69,8 +68,8 @@ class ImageWindow(QMainWindow, QtCore.QObject):
             if v == 'IMAGE':
                 self.image_type.setCurrentText(k)
 
-        self._image_roi = pg.ROI(self._pos1, self._pos2,
-                                 maxBounds=QRectF(QPoint(0, 0), QPoint(self._x_range.size, self._y_range.size)))
+        self._image_roi = pg.ROI(self._pos1, self._pos2)
+                                 #maxBounds=QRectF(QPoint(0, 0), QPoint(self._x_range.size, self._y_range.size)))
         self._image_roi.addScaleHandle((1, 0), (0, 1))
         self._image_roi.addScaleHandle((0, 1), (1, 0))
         self.image_view.addItem(self._image_roi)
@@ -131,6 +130,24 @@ class ImageWindow(QMainWindow, QtCore.QObject):
     def plot(self):
         self._image.setImage(self.image)
 
+class SuperImageWindow(ImageWindow):
+
+    def __init__(self, data, x_range, y_range):
+
+        self._pos1 = (0, 0)
+        self._pos2 = (data.shape[0], data.shape[1])
+
+        ImageWindow.__init__(self, data, x_range, y_range)
+
+    @property
+    def image(self):
+        image = self._data[self._pos1[0]:self._pos2[0],self._pos1[1]:self._pos2[1]].mean(axis=(0, 1))
+        return image
+
+    def _update_image(self):
+        self._pos1, self._pos2 = self.sender().roi_pos()
+        self.plot()
+
 class SpectrumWindow(QMainWindow, QtCore.QObject):
 
     _sigUpdateImage = QtCore.Signal()
@@ -141,13 +158,13 @@ class SpectrumWindow(QMainWindow, QtCore.QObject):
         """
         # Get the path to the *.ui file
         this_dir = os.path.dirname(__file__)
-        ui_file = os.path.join(this_dir, 'ui_spectrum_window.ui')
+        ui_file = os.path.join(this_dir, 'gui/ui_spectrum_window.ui')
 
         # Load it
         super(SpectrumWindow, self).__init__()
         uic.loadUi(ui_file, self)
 
-        with open(os.path.join(this_dir, "style/qdark.qss"), 'r') as stylesheetfile:
+        with open(os.path.join(this_dir, "gui/style/qdark.qss"), 'r') as stylesheetfile:
             stylesheet = stylesheetfile.read()
         self.setStyleSheet(stylesheet)
 
@@ -412,6 +429,44 @@ class Hyperspex(QtCore.QObject):
         self._image.set_data(self._data)
         self._spectrum.set_data(self._data)
 
+class Ultraspex(QtCore.QObject):
+
+    app = QApplication([])
+
+    @classmethod
+    def start_app(cls):
+        sys.exit(cls.app.exec_())
+
+    def __init__(self, data, x_range, y_range, z_range, wavelength_range, remove_background=True):
+
+        if remove_background:
+            self._data = data - data.min()
+        else:
+            self._data = data
+        self._x_range = x_range
+        self._y_range = y_range
+        self._z_range = z_range
+        self._wavelength_range = wavelength_range
+
+        self._image1 = SuperImageWindow(self._data, x_range, y_range)
+        self._image2 = SuperImageWindow(np.transpose(self._data, (2, 3, 0, 1)), z_range, wavelength_range)
+
+        self._image1._sigUpdateSpectrum.connect(self._image2._update_image)
+        self._image2._sigUpdateSpectrum.connect(self._image1._update_image)
+
+        self.show()
+
+    def show(self):
+        """Make window visible and put it above all other windows.
+        """
+        QMainWindow.show(self._image1)
+        QMainWindow.show(self._image2)
+
+    def remove_background(self, background):
+
+        self._data = self._data - background
+        self._image1.set_data(self._data)
+        self._image2.set_data(self._data)
 
 def load_spim(filepath, remove_spike=False):
     with np.load(filepath) as data:
