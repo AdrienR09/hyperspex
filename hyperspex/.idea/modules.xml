@@ -2,7 +2,7 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/.idea/hyperspex.iml" filepath="$PROJECT_DIR$/.idea/hyperspex.iml" />
+      <module fileurl="file://$PROJECT_DIR$/../spectro_toolbox/.idea/spectro_toolbox.iml" filepath="$PROJECT_DIR$/../spectro_toolbox/.idea/spectro_toolbox.iml" />
     </modules>
   </component>
 </project>

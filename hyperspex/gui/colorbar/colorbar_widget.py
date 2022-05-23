@@ -1,7 +1,7 @@
 import pyqtgraph as pg
 
 class ColorBar(pg.GraphicsObject):
-    """ Create a ColorBar according to a previously defined color map.
+    """ Create a ColorBar according to a previously defined color maps.
 
     @param object pyqtgraph.ColorMap cmap: a defined colormap
     @param float width: width of the colorbar in x direction, starting from

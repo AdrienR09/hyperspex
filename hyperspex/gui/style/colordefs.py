@@ -42,7 +42,7 @@ class ColorScale:
 
 
 class ColorScaleRainbow(ColorScale):
-    """ Define the color map that goes from dark blue to bright red.
+    """ Define the color maps that goes from dark blue to bright red.
         Looks gay but is not preferable for a number of reasons:
         brightness linearity, visual banding, red-green colorblindness problems, etc.
 
