@@ -12,3 +12,5 @@ hyperspex/style/__pycache__/colordefs.cpython-36.pyc
 hyperspex/style/__pycache__/colordefs.cpython-38.pyc
 
 .DS_Store
+
+hyperspex/.idea/workspace.xml

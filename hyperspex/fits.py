@@ -18,8 +18,8 @@ from .gui.style.colordefs import ColorScaleInferno, QudiPalette
 from .gui.colorbar.colorbar import ColorbarWidget
 from .gui.scientific_spinbox.scientific_spinbox import ScienDSpinBox
 
-class ImageWindow(QMainWindow, QtCore.QObject):
 
+class ImageWindow(QMainWindow, QtCore.QObject):
     _sigUpdateSpectrum = QtCore.Signal()
 
     def __init__(self, data, x_range, y_range):
@@ -44,6 +44,7 @@ class ImageWindow(QMainWindow, QtCore.QObject):
         self._pos2 = (self._data.shape[0], self._data.shape[1])
         self._i_min = 0
         self._i_max = self._data.shape[2]
+        self._image_fit = np.zeros((self._data.shape[0], self._data.shape[1], 4))
 
         self.init_image()
 
@@ -57,8 +58,19 @@ class ImageWindow(QMainWindow, QtCore.QObject):
         self._colorbar = ColorbarWidget(self._image)
         self.colorbar.addWidget(self._colorbar)
 
+        # TODO : Move to Fit module
+        image_type = {'Image': 'IMAGE',
+                      'Fit - x0': 'x0',
+                      'Fit - w': 'w',
+                      'Fit - A': 'A',
+                      'Fit - B': 'B'}
+        for k, v in image_type.items():
+            self.image_type.addItem(k, v)
+            if v == 'IMAGE':
+                self.image_type.setCurrentText(k)
+
         self._image_roi = pg.ROI(self._pos1, self._pos2)
-                                 #maxBounds=QRectF(QPoint(0, 0), QPoint(self._x_range.size, self._y_range.size)))
+        # maxBounds=QRectF(QPoint(0, 0), QPoint(self._x_range.size, self._y_range.size)))
         self._image_roi.addScaleHandle((1, 0), (0, 1))
         self._image_roi.addScaleHandle((0, 1), (1, 0))
         self.image_view.addItem(self._image_roi)
@@ -89,9 +101,23 @@ class ImageWindow(QMainWindow, QtCore.QObject):
         self._i_min, self._i_max = self.sender().roi_index()
         self.plot()
 
+    def _update_image_fit(self):
+        self._image_fit = self.sender().fit_image()
+        self.plot()
+
     @property
     def image(self):
-        image = self._data
+        image_type = self.image_type.currentData()
+        if image_type == 'x0':
+            image = self._image_fit[:, :, 0]
+        elif image_type == 'w':
+            image = self._image_fit[:, :, 1]
+        elif image_type == 'A':
+            image = self._image_fit[:, :, 2]
+        elif image_type == 'B':
+            image = self._image_fit[:, :, 3]
+        else:
+            image = self._data
         return image
 
     @property
@@ -101,9 +127,10 @@ class ImageWindow(QMainWindow, QtCore.QObject):
     def plot(self):
         self._image.setImage(self.image)
 
-class SpectrumWindow(QMainWindow, QtCore.QObject):
 
+class SpectrumWindow(QMainWindow, QtCore.QObject):
     _sigUpdateAxisImage = QtCore.Signal()
+    _sigUpdateImageFit = QtCore.Signal()
     _sigPlot = QtCore.Signal()
 
     def __init__(self, data, x_range):
@@ -123,7 +150,10 @@ class SpectrumWindow(QMainWindow, QtCore.QObject):
 
         self._data = data
         self._x_range = x_range
+        self._data_fit = np.zeros(self._data.shape)
         self._range_type = "energy"
+
+        self._fit_range = None
 
         self._pos1 = (0, 0)
         self._pos2 = (self._data.shape[0], self._data.shape[1])
@@ -147,6 +177,24 @@ class SpectrumWindow(QMainWindow, QtCore.QObject):
 
         self.range_btn.setText("wavelength")
 
+        self._model_fit = Model(self.lorentzian)
+        self._model_fit.nan_policy = 'omit'
+        self.fit_Nmax.setMinimum(1)
+        self.fit_Nmax.setMaximum(1e6)
+        self.fit_Nmax.setValue(400)
+
+        self.model_dict = {'Lorentzian': self.lorentzian,
+                           'Gaussian': self.gaussian,
+                           'Two Gaussian': self.two_gaussian}
+        self.params_dict = {'Lorentzian': self.get_fit_params,
+                            'Gaussian': self.get_fit_params,
+                            'Two Gaussian': self.get_fit_params}
+
+        for k, v in self.model_dict.items():
+            self.fit_function.addItem(k, v)
+            if v == 'LORENTZ':
+                self.fit_function.setCurrentText(k)
+
         self._update_roi_range()
 
         self._roi_wg.sigRegionChanged.connect(partial(self._update_roi, False))
@@ -157,6 +205,7 @@ class SpectrumWindow(QMainWindow, QtCore.QObject):
         self.fit_btn.clicked.connect(self._sigUpdateImageFit.emit)
 
         self._plot = self.spectrum_view.plot()
+        self._plot_fit = self.spectrum_view.plot(pen=QudiPalette.c2)
         self.plot()
 
     def _update_roi_range(self):
@@ -211,9 +260,22 @@ class SpectrumWindow(QMainWindow, QtCore.QObject):
             return self._hyperspex._wavelength
 
     @property
+    def range_fit(self):
+        i_min, i_max = self._fit_range
+        if self._range_type == "energy":
+            return self._hyperspex._energy[i_min:i_max + 1]
+        else:
+            return self._hyperspex._wavelength[i_min:i_max + 1]
+
+    @property
     def spectrum(self):
-        spectrum = self._hyperspex._data[self._pos1[0]:self._pos2[0],self._pos1[1]:self._pos2[1]].mean(axis=(0, 1))
+        spectrum = self._hyperspex._data[self._pos1[0]:self._pos2[0], self._pos1[1]:self._pos2[1]].mean(axis=(0, 1))
         return spectrum
+
+    @property
+    def spectrum_fit(self):
+        spectrum_fit = self._data_fit[self._pos1[0]:self._pos2[0], self._pos1[1]:self._pos2[1]].mean(axis=(0, 1))
+        return spectrum_fit
 
     def _change_range_type(self):
         self._spectral_roi = c * h / e / self._spectral_roi[::-1]
@@ -228,6 +290,8 @@ class SpectrumWindow(QMainWindow, QtCore.QObject):
 
     def _update_spectrum(self):
         self._pos1, self._pos2 = self.sender().roi_pos()
+        if self._fit_range:
+            self.plot_fit()
         self.plot()
 
     def range_index(self, value):
@@ -244,8 +308,66 @@ class SpectrumWindow(QMainWindow, QtCore.QObject):
     def plot(self):
         self._plot.setData(self.range, self.spectrum)
 
-class Hyperspex(QtCore.QObject):
+    def plot_fit(self):
+        self._plot_fit.setData(self.range_fit, self.spectrum_fit)
 
+    def add_model_fit(self, name, model_func, params_func):
+
+        self.model_dict[name] = model_func
+        self.params_dict[name] = params_func
+        self.fit_function.addItem(name, model_func)
+
+    def gaussian(self, x, peak_position, width, amplitude, background):
+        return amplitude * np.exp(-((x - peak_position) / (2 * width)) ** 2) + background
+
+    def two_gaussian(self, x, peak_position_1, peak_position_2, width_1, width_2, amplitude_1, amplitude_2, background):
+        gaussian_1 = amplitude_1 * np.exp(-((x - peak_position_1) / (2 * width_1)) ** 2)
+        gaussian_2 = amplitude_2 * np.exp(-((x - peak_position_2) / (2 * width_2)) ** 2)
+        return gaussian_1 + gaussian_2 + background
+
+    def lorentzian(self, x, peak_position, width, amplitude, background):
+        return amplitude * width / (width ** 2 + (x - peak_position) ** 2) + background
+
+    def _fit_spectrum(self, xdata, ydata, params):
+        fit = self._model_fit.fit(ydata, params, x=xdata, max_nfev=self.fit_Nmax.value())
+        return fit
+
+    def fit_image(self):
+
+        data_shape = self._hyperspex._data.shape
+        i_min, i_max = self.roi_index()
+        self._fit_range = (i_min, i_max)
+        xdata = self.range[i_min:i_max + 1]
+        fit_image = np.zeros((data_shape[0], data_shape[1], 4))
+        self._data_fit = np.zeros((data_shape[0], data_shape[1], i_max - i_min + 1))
+
+        self._model_fit = Model(self.fit_function.currentData())
+        params_func = self.params_dict[self.fit_function.currentText()]
+        self._model_fit.nan_policy = 'omit'
+
+        for i in range(data_shape[0]):
+            for j in range(data_shape[1]):
+                ydata = self._hyperspex._data[i, j, i_min:i_max + 1]
+                params = params_func(xdata, ydata)
+                fit = self._fit_spectrum(xdata, ydata, params)
+                self._data_fit[i, j, :] = fit.best_fit
+                fit_image[i, j, :] = np.array(list(fit.best_values.values()))
+        self.plot_fit()
+        return fit_image
+
+    def get_fit_params(self, xdata, ydata):
+
+        params = Parameters()
+        params.add('peak_position', min=xdata.min(), max=xdata.max(), value=xdata[(ydata - ydata.max()).argmin()])
+        params.add('width', min=np.abs(xdata.max() - xdata.min()) * 1e-4,
+                   value=np.abs(xdata.max() - xdata.min()) / 2)
+        params.add('amplitude', min=0, value=ydata.max())
+        params.add('background', min=0, value=ydata.min())
+
+        return params
+
+
+class Hyperspex(QtCore.QObject):
     app = QApplication([])
 
     @classmethod
@@ -253,7 +375,7 @@ class Hyperspex(QtCore.QObject):
         sys.exit(cls.app.exec_())
 
     def __init__(self, data=np.zeros((100, 100, 100)), projection=None, **kwargs):
-        
+
         if list(shape(data)) != [len(v) for k, v in kwargs.items()]:
             raise "Explorator object parameter data has a shape different than the axis parameters."
 
