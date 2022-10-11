@@ -2,21 +2,7 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="d7b211c0-8d9e-4179-bed4-6e27803a7acb" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/.gitignore" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/hyperspex.iml" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/inspectionProfiles/profiles_settings.xml" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/misc.xml" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/modules.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/modules.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/figures.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/gui/colorbar/colorbar_widget.py" beforeDir="false" afterPath="$PROJECT_DIR$/gui/colorbar/colorbar_widget.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/gui/style/colordefs.py" beforeDir="false" afterPath="$PROJECT_DIR$/gui/style/colordefs.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/hyperspex.py" beforeDir="false" afterPath="$PROJECT_DIR$/main.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/map_and_spectrum.svg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/spim.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/style/colordefs.py" beforeDir="false" afterPath="$PROJECT_DIR$/style/colordefs.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/templates/map_and_spectrum.svg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/utils/spectrum_tools.py" beforeDir="false" afterPath="$PROJECT_DIR$/utils.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -70,6 +56,8 @@
       <workItem from="1648714003305" duration="2420000" />
       <workItem from="1648719927856" duration="4000" />
       <workItem from="1648719952805" duration="878000" />
+      <workItem from="1653301354533" duration="4643000" />
+      <workItem from="1653396142209" duration="14000" />
     </task>
     <servers />
   </component>
