@@ -45,16 +45,9 @@ class ImageWindow(QMainWindow, QtCore.QObject):
         self._image_fit = np.zeros((hyperspex._data.shape[0], hyperspex._data.shape[1], 4))
 
         self.init_image()
+        self._params = ['x0', 'w', 'A', 'B']
 
     def init_image(self):
-
-        self.my_colors = ColorScaleInferno()
-        self._image = pg.ImageItem(image=self.image, axisOrder='row-major')
-        self._image.setLookupTable(self.my_colors.lut)
-        self.image_view.addItem(self._image)
-
-        self._colorbar = ColorbarWidget(self._image)
-        self.colorbar.addWidget(self._colorbar)
 
         image_type = {'Image' : 'IMAGE',
                       'Fit - x0' : 'x0',
@@ -65,6 +58,14 @@ class ImageWindow(QMainWindow, QtCore.QObject):
             self.image_type.addItem(k, v)
             if v == 'IMAGE':
                 self.image_type.setCurrentText(k)
+
+        self.my_colors = ColorScaleInferno()
+        self._image = pg.ImageItem(image=self.image, axisOrder='row-major')
+        self._image.setLookupTable(self.my_colors.lut)
+        self.image_view.addItem(self._image)
+
+        self._colorbar = ColorbarWidget(self._image)
+        self.colorbar.addWidget(self._colorbar)
 
         self._image_roi = pg.ROI(self._pos1, self._pos2)
                                  #maxBounds=QRectF(QPoint(0, 0), QPoint(self._x_range.size, self._y_range.size)))
@@ -99,22 +100,24 @@ class ImageWindow(QMainWindow, QtCore.QObject):
         self.plot()
 
     def _update_image_fit(self):
-        self._image_fit = self.sender().fit_image()
+        self._params, self._image_fit = self.sender().fit_image()
+        self.image_type.clear()
+        self.image_type.addItem('Image', 'IMAGE')
+        for param in self._params:
+            self.image_type.addItem("Fit - {}".format(param), param)
         self.plot()
 
     @property
     def image(self):
         image_type = self.image_type.currentData()
-        if image_type == 'x0':
-            image = self._image_fit[:, :, 0]
-        elif image_type == 'w':
-            image = self._image_fit[:, :, 1]
-        elif image_type == 'A':
-            image = self._image_fit[:, :, 2]
-        elif image_type == 'B':
-            image = self._image_fit[:, :, 3]
+        if image_type == 'IMAGE':
+            image = self._hyperspex._data[:, :, self._i_min:self._i_max + 1].mean(axis=2)
         else:
-            image = self._hyperspex._data[:, :, self._i_min:self._i_max+1].mean(axis=2)
+            param_idx = np.where(np.array(self._params)==image_type)
+            if len(param_idx) != 0 and param_idx[0][0]<len(self._image_fit):
+                image = self._image_fit[:, :, param_idx[0][0]]
+            else:
+                image = self._hyperspex._data[:, :, self._i_min:self._i_max + 1].mean(axis=2)
         return image
 
     def roi_pos(self):
@@ -366,7 +369,7 @@ class SpectrumWindow(QMainWindow, QtCore.QObject):
                 self._data_fit[i, j, :] = fit.best_fit
                 fit_image[i, j, :] = np.array(list(fit.best_values.values()))
         self.plot_fit()
-        return fit_image
+        return [p for p in params.keys()], fit_image
 
     def get_fit_params(self, xdata, ydata):
 
