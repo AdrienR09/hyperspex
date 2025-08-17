@@ -1,0 +1,19 @@
+[build-system]
+requires = ["setuptools>=42"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "hyperspex"
+version = "0.1.0"
+description = "Kinetic Inverse-Laplace Toolbox for MEM fitting"
+authors = [
+  { name = "Adrien Rousseau" }
+]
+license = { file = "LICENSE" }
+readme = "README.md"
+dependencies = [
+    "numpy",
+    "scipy",
+    "matplotlib",
+    "lmfit",
+]
