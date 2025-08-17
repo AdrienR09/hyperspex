@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "hyperspex"
-version = "0.1.0"
+version = "0.2.0"
 description = "Kinetic Inverse-Laplace Toolbox for MEM fitting"
 authors = [
   { name = "Adrien Rousseau" }
