@@ -14,9 +14,9 @@ from qtpy import uic
 from qtpy import QtCore
 from qtpy.QtCore import Qt, QRectF, QPoint
 
-from .gui.style.colordefs import ColorScaleInferno, QudiPalette
-from .gui.colorbar.colorbar import ColorbarWidget
-from .gui.scientific_spinbox.scientific_spinbox import ScienDSpinBox
+from hyperspex.gui.style.colordefs import ColorScaleInferno, QudiPalette
+from hyperspex.gui.colorbar.colorbar import ColorbarWidget
+from hyperspex.gui.scientific_spinbox.scientific_spinbox import ScienDSpinBox
 
 class ImageWindow(QMainWindow, QtCore.QObject):
 
